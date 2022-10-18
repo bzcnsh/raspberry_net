@@ -1,0 +1,88 @@
+# problem: driver for ALFA single antenna USB netowk adaptor not working
+# sympotom:
+in dmesg. has the following error
+```
+[    6.871634] mt76x0u 1-1.2:1.0: ASIC revision: 76100002 MAC revision: 76502000
+[    6.952540] mt76x0u 1-1.2:1.0: Invalid firmware image
+[    6.986910] mt76x0u: probe of 1-1.2:1.0 failed with error -2
+[    6.987522] usbcore: registered new interface driver mt76x0u
+```
+# fix:
+follow this post: https://forums.raspberrypi.com/viewtopic.php?p=1702460&sid=453e062b3e18b28cb97e7ec1b6c52af9#p1702460
+and use the latest deb file
+
+## command executed
+wget http://ftp.uk.debian.org/debian/pool/non-free/f/firmware-nonfree/firmware-misc-nonfree_20210818-1_all.deb
+sudo dpkg -i firmware-misc-nonfree_20210818-1_all.deb
+
+unplug and re-insert the usb adaptor.
+```
+[ 2404.686430] usb 1-1.2: USB disconnect, device number 4
+[ 2409.337551] usb 1-1.2: new high-speed USB device number 7 using xhci_hcd
+[ 2409.483862] usb 1-1.2: New USB device found, idVendor=0e8d, idProduct=7610, bcdDevice= 1.00
+[ 2409.483886] usb 1-1.2: New USB device strings: Mfr=1, Product=2, SerialNumber=3
+[ 2409.483905] usb 1-1.2: Product: WiFi
+[ 2409.483923] usb 1-1.2: Manufacturer: MediaTek
+[ 2409.483940] usb 1-1.2: SerialNumber: 1.0
+[ 2409.588604] usb 1-1.2: reset high-speed USB device number 7 using xhci_hcd
+[ 2409.724799] mt76x0u 1-1.2:1.0: ASIC revision: 76100002 MAC revision: 76502000
+[ 2410.760894] mt76x0u 1-1.2:1.0: EEPROM ver:02 fae:04
+[ 2410.783984] ieee80211 phy2: Selected rate control algorithm 'minstrel_ht'
+
+```
+
+`ip a` now shows wlan2
+
+
+# the other USB adaptor
+no error message in dmesg, but there is no wlan card either
+
+someone suggested compiling the module: https://raspberrypi.stackexchange.com/questions/120134/install-drivers-for-rtl8812au-for-raspibian-kernel-5-4-79-v71-rpi-4
+however the required linux header files are missing, and cannot be found at https://github.com/raspberrypi/linux/branches/all?query=5.10
+beside, rb4b is slow to process git, make will likely be even slower, so need to cross compilation host.
+https://www.raspberrypi.com/documentation/computers/linux_kernel.html
+https://openwrt.org/docs/guide-developer/toolchain/crosscompile
+
+besides, it's very slow to download or process git on 
+worth setting up on the nuc boxes.
+
+```
+https://raspberrypi.stackexchange.com/questions/120134/install-drivers-for-rtl8812au-for-raspibian-kernel-5-4-79-v71-rpi-4
+```
+install linux header for the current raspberry pi
+```
+https://github.com/RPi-Distro/rpi-source
+```
+
+https://www.raspberrypi.com/documentation/computers/linux_kernel.html
+
+#access point
+https://thepi.io/how-to-use-your-raspberry-pi-as-a-wireless-access-point/
+
+# persistent network names:
+https://forums.raspberrypi.com/viewtopic.php?p=1574413&sid=01928cd72aae7ec13524f85fc3898a09#p1574413
+https://forums.raspberrypi.com/viewtopic.php?t=278522
+
+# huawei dongle
+apt-get install -y usb-modeswitch ppp and wvdial
+
+network manager: https://raspberrypi.stackexchange.com/questions/29783/how-to-setup-network-manager-on-raspbian
+modem manager: https://forums.raspberrypi.com/viewtopic.php?t=302262
+sudo apt install modemmanager modem-manager-gui
+
+
+find huawei_cdc_ncm module, and load it with modprobe
+network manager discovered the GSM connection automatically, 
+sudo mmcli -m 0 --simple-connect='apn=h2g2,ip-type=ipv4'
+
+pi@raspberrypi:~ $ nmcli dev status
+DEVICE   TYPE      STATE         CONNECTION 
+ttyUSB2  gsm       connected     wwan       
+ppp0     ppp       disconnected  --         
+eth0     ethernet  unavailable   --         
+wlan0    wifi      unavailable   --         
+lo       loopback  unmanaged     --         
+pi@raspberrypi:~ $ sudo nmcli c add type "gsm" con-name "wwan" apn h2g2 ifname ttyUSB2^C
+pi@raspberrypi:~ $ nmcli c up wwan^C
+
+https://unix.stackexchange.com/questions/113975/configure-gsm-connection-using-nmcli
